@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "target": "ES2020", // Target can often be ES2020 or higher for modern JS
+    "useDefineForClassFields": true, // Recommended for Vite
+    "module": "ESNext",
+    "lib": [
+      "ES2020", // Match target
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true,
+    "types": [
+      "node",
+      "vite/client" // <-- Add this line
+    ],
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* Paths (ensure this matches your setup if you use '@/') */
+    "paths": {
+      "@/*": [
+        "./src/*" // Ensure this points correctly to your src folder
+      ]
+    },
+    "allowJs": true // Keep if you mix JS and TS
+    // Remove "experimentalDecorators" if not needed
+  },
+  "include": ["src"], // Important: Only include your source directory
+}
