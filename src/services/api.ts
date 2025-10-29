@@ -11,7 +11,7 @@ apiClient.interceptors.request.use(config => {
   const token = localStorage.getItem('authToken');
   if (token) {
     // *** This is the corrected line ***
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`; // Correct template literal
   }
   return config;
 }, error => {
