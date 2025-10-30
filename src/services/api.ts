@@ -2,7 +2,8 @@ import axios from 'axios';
 import { Product, Offer, CartItem, ShippingDetails } from '../types';
 
 // Set up a base instance for axios
-const apiClient = axios.create({
+// *** FIX: Add the 'export' keyword here ***
+export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
@@ -10,8 +11,8 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(config => {
   const token = localStorage.getItem('authToken');
   if (token) {
-    // *** This is the corrected line ***
-    config.headers.Authorization = `Bearer ${token}`; // Correct template literal
+    // Correctly set the Authorization header
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 }, error => {
@@ -38,7 +39,7 @@ apiClient.interceptors.response.use(
   }
 );
 
-
+// Keep the existing api object if preferred, ensuring it uses the exported apiClient
 export const api = {
   getProducts: async (category?: string): Promise<Product[]> => {
     const response = await apiClient.get('/products', {
@@ -53,12 +54,9 @@ export const api = {
       return response.data;
     } catch (error) {
       console.error(`Error fetching product ${id}:`, error);
-      // Don't return undefined immediately if it's a 404, let caller handle
       if (axios.isAxiosError(error) && error.response?.status === 404) {
-         // Optionally handle 404 specifically, maybe return null
          return undefined;
       }
-      // Re-throw other errors
       throw error;
     }
   },
@@ -69,12 +67,11 @@ export const api = {
         return response.data;
      } catch (error) {
         console.error("Error fetching active offer:", error);
-        throw error; // Re-throw
+        throw error;
      }
   },
 
   searchProducts: async (query: string): Promise<Product[]> => {
-    // Prevent request if query is empty
     if (!query.trim()) {
         return [];
     }
@@ -101,7 +98,7 @@ export const api = {
     return response.data;
   },
 
-  // === Admin Functions (Require Authentication Header from Interceptor) ===
+  // === Admin Functions ===
   addProduct: async (productData: Omit<Product, 'id' | 'popularity'>): Promise<Product> => {
     const response = await apiClient.post('/admin/products', productData);
     return response.data;
@@ -114,6 +111,6 @@ export const api = {
 
   deleteProduct: async (productId: string): Promise<{ success: boolean }> => {
     const response = await apiClient.delete(`/admin/products/${productId}`);
-    return response.data; // Expecting { success: true } or error
+    return response.data;
   }
 };

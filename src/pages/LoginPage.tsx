@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
+// --- REMOVE unused Google imports ---
+// import { GoogleLogin, CredentialResponse } from '@react-oauth/google';
 import { useAuth } from '../hooks/useAuth';
 import { useNotification } from '../hooks/useNotification';
+import axios from 'axios'; // For axios.isAxiosError
 
 // --- ForgotPasswordModal remains the same ---
 const ForgotPasswordModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
@@ -105,7 +107,8 @@ interface LocationState {
 }
 
 const LoginPage: React.FC = () => {
-    const { login, verifyGoogleTokenWithBackend, loading, isGoogleAuthLoading } = useAuth();
+    // --- *** FIX: Get signInWithGoogle from useAuth *** ---
+    const { login, signInWithGoogle, loading, isGoogleAuthLoading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const { addNotification } = useNotification();
@@ -114,69 +117,49 @@ const LoginPage: React.FC = () => {
     const [error, setError] = useState('');
     const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
 
-    // *** FIX: Cast location.state to the expected type ***
     const typedState = location.state as LocationState | null;
     const from = typedState?.from?.pathname || "/";
 
-    // Handle email/password login submission
+    // Handle email/password login submission (no change)
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         try {
-            // *** FIX: Ensure login call is correct (it was already correct syntactically) ***
-            // Assuming the error might stem from how the promise rejection is handled
             await login(email, password);
             addNotification({ message: 'Login successful!', type: 'success' });
             navigate(from, { replace: true });
         } catch (err) {
             console.error("Email/Password login failed:", err);
-            // Extract a user-friendly error message if available
-            let errorMessage = 'Invalid email or password. Please try again.'; // Default
-            if (axios.isAxiosError(err) && err.response?.data?.message) {
-                 errorMessage = err.response.data.message; // Use backend message if provided
-            } else if (err instanceof Error) {
-                 errorMessage = err.message; // Use generic error message
+            let errorMessage = 'Invalid email or password. Please try again.';
+            if (err instanceof Error) {
+                 errorMessage = err.message;
             }
             setError(errorMessage);
         }
     };
 
-    // Handle successful Google Sign-In from the GoogleLogin component
-    const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    // --- *** FIX: New Google Sign-In Handler *** ---
+    // This handler calls the signInWithGoogle function from AuthContext
+    const handleGoogleSignIn = async () => {
         setError('');
         try {
-            await verifyGoogleTokenWithBackend(credentialResponse);
+            await signInWithGoogle();
             addNotification({ message: 'Signed in with Google successfully!', type: 'success' });
             navigate(from, { replace: true });
         } catch (err) {
-            console.error("Google Sign-In backend verification failed:", err);
-            let errorMessage = "Google Sign-In failed during backend verification. Please try again.";
-             if (axios.isAxiosError(err) && err.response?.data?.message) {
-                 errorMessage = err.response.data.message;
-             } else if (err instanceof Error) {
+            console.error("Google Sign-In process failed:", err);
+            let errorMessage = "Google Sign-In failed. Please try again.";
+             if (err instanceof Error) {
                  errorMessage = err.message;
              }
             setError(errorMessage);
-            addNotification({ message: errorMessage, type: 'error' });
+            // You can optionally add a notification here too
+            // addNotification({ message: errorMessage, type: 'error' });
         }
     };
 
-    // Handle errors from the GoogleLogin component itself
-    const handleGoogleError = () => {
-        console.error("Google Sign-In process failed or was cancelled by user.");
-        const errorMessage = 'Google Sign-In failed or was cancelled.';
-        setError(errorMessage);
-        addNotification({ message: errorMessage, type: 'error' });
-    };
-
-    const isDarkMode = document.documentElement.classList.contains('dark');
-
-    // Need to import axios to use isAxiosError
-    // Add this import at the top of the file:
-    // import axios from 'axios';
-    // However, since it's used within AuthContext, maybe it's better to
-    // handle the error message extraction within AuthContext itself and re-throw
-    // a simpler error or a specific error type. For now, this inline check works.
+    // handleGoogleError is no longer needed
+    // const handleGoogleError = () => { ... };
 
     return (
         <>
@@ -195,7 +178,7 @@ const LoginPage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Email/Password Form */}
+                    {/* Email/Password Form (no change) */}
                     <form className="space-y-6" onSubmit={handleLogin}>
                         {/* Email Input */}
                         <div>
@@ -225,7 +208,7 @@ const LoginPage: React.FC = () => {
                                 className="mt-1 block w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-500 focus:outline-none focus:ring-shrain-purple focus:border-shrain-purple"
                             />
                         </div>
-                        {/* Forgot Password */}
+                        {/* Forgot Password (no change) */}
                         <div className="flex items-center justify-end">
                             <button
                                 type="button"
@@ -236,7 +219,7 @@ const LoginPage: React.FC = () => {
                                 Forgot your password?
                             </button>
                         </div>
-                        {/* Sign In Button */}
+                        {/* Sign In Button (no change) */}
                         <div>
                             <button
                                 type="submit"
@@ -248,7 +231,7 @@ const LoginPage: React.FC = () => {
                         </div>
                     </form>
 
-                    {/* OR Separator */}
+                    {/* OR Separator (no change) */}
                     <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
@@ -260,24 +243,33 @@ const LoginPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Google Login Button Area */}
+                    {/* --- *** FIX: Google Login Button Area *** --- */}
                     <div className="flex justify-center items-center h-10">
                         {isGoogleAuthLoading ? (
                             <div className="text-sm text-gray-500 dark:text-shrain-light-gray animate-pulse">
-                                Signing in with Google...
+                                Opening Google Sign-In...
                             </div>
                         ) : (
-                             <GoogleLogin
-                                onSuccess={handleGoogleSuccess}
-                                onError={handleGoogleError}
-                                useOneTap
-                                theme={isDarkMode ? 'filled_black' : 'outline'}
-                                shape='pill'
-                             />
+                             // Replaced <GoogleLogin> with a standard button
+                             <button
+                                type="button"
+                                onClick={handleGoogleSignIn}
+                                disabled={loading} // Disable if email login is loading
+                                className="w-full flex justify-center items-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-shrain-purple disabled:opacity-50 disabled:cursor-not-allowed"
+                             >
+                                {/* Google Icon SVG */}
+                                <svg className="w-5 h-5 mr-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+                                    <path fill="#4285F4" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"></path>
+                                    <path fill="#34A853" d="M6.306 14.691L20 24.81l-5.657 5.657C10.046 34.046 4 29.268 4 24c0-2.65.539-5.161 1.464-7.489l-8.158-6.82z"></path>
+                                    <path fill="#FBBC05" d="M24 48c5.166 0 9.86-1.977 13.409-5.192l-5.657-5.657C30.046 39.954 27.268 41 24 41c-3.059 0-5.842-1.154-7.961-3.039l-5.657 5.657C14.14 46.023 18.834 48 24 48z"></path>
+                                    <path fill="#EA4335" d="M43.611 20.083L48 24c0-1.341-.138-2.65-.389-3.917L33.007 9.49l-5.657 5.657C29.954 12.954 32.732 12 36 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C42.046 6.053 37.268 4 32 4c-5.166 0-9.86 1.977-13.409 5.192l5.657 5.657C26.046 12.954 28.834 12 32 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657z"></path>
+                                </svg>
+                                Sign in with Google
+                             </button>
                         )}
                     </div>
 
-                    {/* Sign Up Link */}
+                    {/* Sign Up Link (no change) */}
                     <p className="mt-6 text-center text-sm text-gray-500 dark:text-shrain-light-gray">
                         Don't have an account?{' '}
                         <Link
@@ -290,13 +282,10 @@ const LoginPage: React.FC = () => {
                     </p>
                 </div>
             </motion.div>
-            {/* Forgot Password Modal */}
+            {/* Forgot Password Modal (no change) */}
             <ForgotPasswordModal isOpen={isForgotPasswordOpen} onClose={() => setIsForgotPasswordOpen(false)} />
         </>
     );
 };
-
-// You might need this import if you check for axios errors directly here
-import axios from 'axios';
 
 export default LoginPage;
