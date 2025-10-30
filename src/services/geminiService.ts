@@ -1,6 +1,3 @@
-import { Product } from '../types';
-import { api } from './api';
-
 export const geminiService = {
   /**
    * Generates a content stream from the backend's AI chat endpoint.
